@@ -40,6 +40,13 @@ async function fetchState(): Promise<AppState> {
   return data ?? EMPTY_STATE
 }
 
+async function fetchDataPath(): Promise<string> {
+  const res = await fetch('/api/config')
+  if (!res.ok) return ''
+  const { dataPath } = await res.json()
+  return dataPath ?? ''
+}
+
 async function persistState(state: AppState): Promise<void> {
   const res = await fetch('/api/state', {
     method: 'POST',
@@ -58,6 +65,10 @@ export default function App() {
     if (saved === 'light' || saved === 'dark') return saved
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   })
+  const [dataPath, setDataPath]         = useState('')
+  const [pathDraft, setPathDraft]       = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [pathError, setPathError]       = useState('')
   const saveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const importRef  = useRef<HTMLInputElement>(null)
 
@@ -67,9 +78,15 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
+    fetchDataPath().then(p => { setDataPath(p); setPathDraft(p) })
     fetchState()
       .then(s => setState({ ...EMPTY_STATE, ...s }))
-      .catch(() => setState(EMPTY_STATE))
+      .catch(err => {
+        console.error(err)
+        setPathError('Could not load data file — check the path in ⚙ Settings')
+        setShowSettings(true)
+        setState(EMPTY_STATE)
+      })
   }, [])
 
   useEffect(() => {
@@ -90,6 +107,26 @@ export default function App() {
 
   function clearAll() {
     if (confirm('Clear all data and start fresh?')) setState(EMPTY_STATE)
+  }
+
+  async function saveDataPath() {
+    setPathError('')
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataPath: pathDraft.trim() }),
+      })
+      const body = await res.json()
+      if (!res.ok) { setPathError(body.error ?? 'Failed to save path'); return }
+      setDataPath(body.dataPath)
+      setShowSettings(false)
+      fetchState()
+        .then(s => setState({ ...EMPTY_STATE, ...s }))
+        .catch(() => setState(EMPTY_STATE))
+    } catch {
+      setPathError('Could not reach server')
+    }
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -153,8 +190,32 @@ export default function App() {
             Import JSON
           </button>
           <button className="btn-reset" onClick={clearAll}>Clear All Data</button>
+          <button
+            className="btn-theme"
+            title="Data file location"
+            onClick={() => { setPathDraft(dataPath); setPathError(''); setShowSettings(s => !s) }}
+          >
+            ⚙
+          </button>
         </div>
       </header>
+
+      {showSettings && (
+        <div className="settings-bar">
+          <label className="settings-label">Data file path</label>
+          <input
+            className="settings-path-input"
+            value={pathDraft}
+            onChange={e => setPathDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') saveDataPath(); if (e.key === 'Escape') setShowSettings(false) }}
+            spellCheck={false}
+            placeholder="/mnt/nas/finance-data.json"
+          />
+          {pathError && <span className="settings-error">{pathError}</span>}
+          <button className="btn-save" onClick={saveDataPath}>Save</button>
+          <button className="btn-cancel" onClick={() => setShowSettings(false)}>Cancel</button>
+        </div>
+      )}
 
       <nav className="tab-nav">
         <button className={`tab-btn ${tab === 'expenses'    ? 'active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
