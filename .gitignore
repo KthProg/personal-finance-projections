@@ -1,0 +1,6 @@
+finance-data.json
+Expenses.ods
+node_modules/
+app/node_modules/
+app/dist/
+.claude

@@ -1,0 +1,16 @@
+{
+  "name": "finance-planner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev":    "concurrently -n server,vite -c cyan,magenta \"node server.cjs\" \"npm run dev --prefix app\"",
+    "build":  "npm run build --prefix app",
+    "server": "node server.cjs"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
