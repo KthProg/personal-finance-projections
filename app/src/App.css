@@ -410,6 +410,7 @@ input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-colo
 .badge-no    { color: var(--text-muted); }
 .badge-wh    { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 700; }
 .badge-match { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 700; }
+.exp-cat-badge { font-size: 10px; font-weight: 600; letter-spacing: .03em; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; background: var(--bg3); color: var(--text-muted); white-space: nowrap; }
 
 /* ── Persistent income strip ─────────────────────────────────────────────── */
 .income-strip {
@@ -749,6 +750,122 @@ input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-colo
 .cat-badge.cat-cash       { background: var(--bg3); }
 .cat-badge.cat-crypto     { background: var(--yellow-dim); }
 .cat-badge.cat-other      { background: var(--bg3); }
+
+/* ── Budgeting section ───────────────────────────────────────────────────── */
+.budget-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  background: var(--bg2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.budget-empty-title { font-size: 16px; font-weight: 600; color: var(--text-heading); }
+.budget-empty-sub { font-size: 13px; color: var(--text-muted); max-width: 420px; line-height: 1.6; }
+
+.budget-coverage {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.over-card  { border-color: var(--red);   background: var(--red-dim);   }
+.under-card { border-color: var(--green); background: var(--green-dim); }
+.over-card  .card-label { color: var(--red);   opacity: .8; }
+.under-card .card-label { color: var(--green); opacity: .8; }
+.over-card  .card-value { color: var(--red);   }
+.under-card .card-value { color: var(--green); }
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.budget-cat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.budget-cat-row:last-child { border-bottom: none; }
+
+.budget-cat-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.budget-cat-name  { flex: 1; }
+.budget-cat-count { font-size: 11px; }
+.budget-cat-amount { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+.budget-bar-track {
+  height: 4px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.budget-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width .3s;
+}
+.budget-bar-budget { background: var(--green); }
+
+.disc-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--yellow-dim);
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.tx-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.tx-list-header h3 { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+
+.pos { color: var(--green); }
+.sort-indicator { color: var(--accent); margin-left: 3px; font-size: 10px; }
+
+.tx-pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  padding: 10px 0 2px;
+}
+.btn-page {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 8px;
+  line-height: 1.6;
+}
+.btn-page:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-page:disabled { opacity: 0.35; cursor: default; }
+.page-info { font-size: 12px; color: var(--text-muted); padding: 0 4px; }
 
 /* ── Theme toggle ────────────────────────────────────────────────────────── */
 .btn-theme {

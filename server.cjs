@@ -14,6 +14,7 @@ const EMPTY_STATE = {
   investments: [],
   expenses: [],
   holdings: [],
+  transactions: [],
   annualReturnRate: 0.07,
   age: 0,
   retirementAge: 65,

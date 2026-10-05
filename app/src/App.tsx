@@ -5,6 +5,7 @@ import ExpensesSection from './components/ExpensesSection'
 import InvestmentsSection from './components/InvestmentsSection'
 import PortfolioSection from './components/PortfolioSection'
 import IncomeSection from './components/IncomeSection'
+import BudgetingSection from './components/BudgetingSection'
 import './App.css'
 
 const EMPTY_STATE: AppState = {
@@ -14,6 +15,7 @@ const EMPTY_STATE: AppState = {
   investments: [],
   expenses: [],
   holdings: [],
+  transactions: [],
   annualReturnRate: 0.07,
   age: 0,
   retirementAge: 65,
@@ -29,7 +31,7 @@ const PAY_PERIODS = [
 ]
 
 type SaveStatus = 'saved' | 'saving' | 'error'
-type Tab = 'expenses' | 'investments' | 'portfolio' | 'income'
+type Tab = 'expenses' | 'investments' | 'income' | 'budgeting' | 'portfolio'
 
 async function fetchState(): Promise<AppState> {
   const res = await fetch('/api/state')
@@ -158,6 +160,7 @@ export default function App() {
         <button className={`tab-btn ${tab === 'expenses'    ? 'active' : ''}`} onClick={() => setTab('expenses')}>Expenses</button>
         <button className={`tab-btn ${tab === 'investments' ? 'active' : ''}`} onClick={() => setTab('investments')}>Contributions</button>
         <button className={`tab-btn ${tab === 'income'      ? 'active' : ''}`} onClick={() => setTab('income')}>Income &amp; Summary</button>
+        <button className={`tab-btn ${tab === 'budgeting'   ? 'active' : ''}`} onClick={() => setTab('budgeting')}>Budgeting</button>
         <button className={`tab-btn ${tab === 'portfolio'   ? 'active' : ''}`} onClick={() => setTab('portfolio')}>Investments</button>
       </nav>
 
@@ -220,6 +223,14 @@ export default function App() {
             investments={state.investments}
             payPeriodsPerYear={state.payPeriodsPerYear}
             onChange={investments => update({ investments })}
+          />
+        )}
+        {tab === 'budgeting' && (
+          <BudgetingSection
+            transactions={state.transactions}
+            expenses={state.expenses}
+            payPeriodsPerYear={state.payPeriodsPerYear}
+            onChange={transactions => update({ transactions })}
           />
         )}
         {tab === 'portfolio' && (

@@ -17,6 +17,7 @@ export interface Expense {
   paymentMethod: string
   necessary: boolean
   isWithholding: boolean // tax withholding — separated in income waterfall
+  expenseCategory?: string // maps to expense category for budgeting comparison
 }
 
 export interface Investment {
@@ -36,10 +37,20 @@ export interface Holding {
   currentValue: number
 }
 
+export interface Transaction {
+  id: string
+  date: string        // MM/DD/YYYY (Chase format)
+  description: string
+  category: string
+  type: string        // 'Sale' | 'Payment' | 'Return'
+  amount: number      // raw CSV amount — negative for sales, positive for returns/payments
+}
+
 export interface AppState {
   expenses: Expense[]
   investments: Investment[]
   holdings: Holding[]
+  transactions: Transaction[]
   annualSalary: number
   payPeriodsPerYear: number // 26 = bi-weekly
   paymentMethods: string[]

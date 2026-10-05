@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Expense, Frequency } from '../types'
 import { toMonthly, frequencyLabel, fmt } from '../calculations'
 import { calculateExpenseTotals } from '../calculations'
+import { EXPENSE_CATEGORIES } from '../constants'
 
 const FREQUENCIES: Frequency[] = [
   'weekly', 'bi-weekly', 'monthly', 'quarterly',
@@ -28,7 +29,7 @@ interface Props {
 
 const BLANK_EXPENSE: Omit<Expense, 'id'> = {
   name: '', amount: 0, frequency: 'monthly', paymentDates: [],
-  paymentMethod: '', necessary: true, isWithholding: false,
+  paymentMethod: '', necessary: true, isWithholding: false, expenseCategory: '',
 }
 
 export default function ExpensesSection({ expenses, paymentMethods, payPeriodsPerYear, onChange, onMethodsChange }: Props) {
@@ -182,6 +183,15 @@ export default function ExpensesSection({ expenses, paymentMethods, payPeriodsPe
           {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
       </td>
+      <td>
+        <select
+          value={draft.expenseCategory ?? ''}
+          onChange={e => setDraft(d => ({ ...d, expenseCategory: e.target.value }))}
+        >
+          <option value="">— none —</option>
+          {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </td>
       <td className="center-cell">
         <input
           type="checkbox"
@@ -272,6 +282,7 @@ export default function ExpensesSection({ expenses, paymentMethods, payPeriodsPe
               <th>Monthly</th>
               <th>Payment Dates</th>
               <th>Method</th>
+              <th title="Expense Category">Category</th>
               <th title="Necessary">Nec.</th>
               <th title="Tax Withholding">W/H</th>
               <th></th>
@@ -301,6 +312,11 @@ export default function ExpensesSection({ expenses, paymentMethods, payPeriodsPe
                         : <span className="muted">—</span>}
                     </td>
                     <td className="muted">{exp.paymentMethod || '—'}</td>
+                    <td>
+                      {exp.expenseCategory
+                        ? <span className="exp-cat-badge">{exp.expenseCategory}</span>
+                        : <span className="muted">—</span>}
+                    </td>
                     <td className="center-cell">
                       <span className={exp.necessary ? 'badge-yes' : 'badge-no'}>
                         {exp.necessary ? '✓' : '✗'}
@@ -323,7 +339,7 @@ export default function ExpensesSection({ expenses, paymentMethods, payPeriodsPe
               <td className="monthly-cell">
                 <strong>{fmt(visible.reduce((s, e) => s + toMonthly(e, payPeriodsPerYear), 0))}</strong>
               </td>
-              <td colSpan={5}></td>
+              <td colSpan={6}></td>
             </tr>
           </tfoot>
         </table>
