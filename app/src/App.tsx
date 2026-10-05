@@ -85,7 +85,8 @@ export default function App() {
         console.error(err)
         setPathError('Could not load data file — check the path in ⚙ Settings')
         setShowSettings(true)
-        setState(EMPTY_STATE)
+        // Do NOT setState here — setting state triggers autosave which would
+        // overwrite the data file with empty state.
       })
   }, [])
 

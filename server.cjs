@@ -91,6 +91,9 @@ app.get('/api/state', (_req, res) => {
 app.post('/api/state', (req, res) => {
   const filePath = getDataFile()
   try {
+    if (fs.existsSync(filePath)) {
+      fs.copyFileSync(filePath, filePath + '.bak')
+    }
     fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2))
     res.json({ ok: true })
   } catch (err) {
