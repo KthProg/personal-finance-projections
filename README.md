@@ -47,6 +47,7 @@ finance-planner/
     └── src/
         ├── types.ts
         ├── calculations.ts
+        ├── constants.ts
         └── components/
 ```
 
@@ -54,10 +55,18 @@ finance-planner/
 
 | Tab | What it does |
 |-----|-------------|
-| **Expenses** | Recurring expenses at any frequency — weekly, bi-weekly, monthly, quarterly, annually, and more. Flags for tax withholding and necessary vs. discretionary. |
+| **Expenses** | Recurring expenses at any frequency — weekly, bi-weekly, monthly, quarterly, annually, and more. Assign an expense category to each item to enable direct comparison against imported transactions. Flags for tax withholding and necessary vs. discretionary. |
 | **Contributions** | Monthly investment contributions (401k, Roth, HSA, etc.) with pre-tax and employer match flags. |
 | **Income & Summary** | Full income waterfall from gross salary to surplus, shown monthly and per-paycheck. |
-| **Investments** | Portfolio holdings by category, future value projection based on your age, retirement age, and return assumptions. |
+| **Budgeting** | Import Chase CSV exports (select multiple files at once) to compare actual spending against your budget by category. Payments, loan payments, and investment transfers are automatically excluded. Transactions are deduplicated across imports so overlapping date ranges are safe to re-import. |
+| **Investments** | Portfolio holdings by category, future value projection based on your age, retirement age, and return assumptions. Uses the 4% rule to estimate monthly retirement income. |
+
+## Budgeting tab — how it works
+
+1. Download your activity CSV from Chase (Accounts → Download account activity)
+2. Click **Import CSV** in the Budgeting tab and select one or more CSV files
+3. Tag your expenses in the Expenses tab with an expense category (the same categories Chase uses) to see a side-by-side comparison
+4. Actual spending is prorated against your monthly budget based on the date range of your transactions
 
 ## Calculation reference
 
