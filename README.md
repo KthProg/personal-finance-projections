@@ -51,6 +51,18 @@ finance-planner/
         └── components/
 ```
 
+## AI Assistant
+
+A floating chat button (✦) in the bottom-right corner opens an AI assistant powered by Claude. It has full read access to your financial snapshot — salary, expenses, contributions, holdings, and retirement projection — and can answer questions, flag concerns, or suggest trade-offs based on your actual numbers.
+
+To enable it:
+
+1. Get a Claude API key from [console.anthropic.com](https://console.anthropic.com) → API Keys (or request one from your org admin if you're on an enterprise account)
+2. Open ⚙ Settings in the app and paste the key into the **Claude API key** field
+3. Click **Save** — the ✦ button will activate
+
+The key is stored in `config.json` on your machine and is never sent anywhere except directly to the Anthropic API. Responses stream in token by token.
+
 ## Tabs
 
 | Tab | What it does |

@@ -6,6 +6,7 @@ import InvestmentsSection from './components/InvestmentsSection'
 import PortfolioSection from './components/PortfolioSection'
 import IncomeSection from './components/IncomeSection'
 import BudgetingSection from './components/BudgetingSection'
+import ChatPanel from './components/ChatPanel'
 import './App.css'
 
 const EMPTY_STATE: AppState = {
@@ -40,11 +41,11 @@ async function fetchState(): Promise<AppState> {
   return data ?? EMPTY_STATE
 }
 
-async function fetchDataPath(): Promise<string> {
+async function fetchConfig(): Promise<{ dataPath: string; hasApiKey: boolean }> {
   const res = await fetch('/api/config')
-  if (!res.ok) return ''
-  const { dataPath } = await res.json()
-  return dataPath ?? ''
+  if (!res.ok) return { dataPath: '', hasApiKey: false }
+  const data = await res.json()
+  return { dataPath: data.dataPath ?? '', hasApiKey: !!data.hasApiKey }
 }
 
 async function persistState(state: AppState): Promise<void> {
@@ -69,6 +70,10 @@ export default function App() {
   const [pathDraft, setPathDraft]       = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [pathError, setPathError]       = useState('')
+  const [hasApiKey, setHasApiKey]       = useState(false)
+  const [apiKeyDraft, setApiKeyDraft]   = useState('')
+  const [apiKeyError, setApiKeyError]   = useState('')
+  const [apiKeySaved, setApiKeySaved]   = useState(false)
   const saveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const importRef  = useRef<HTMLInputElement>(null)
 
@@ -78,7 +83,9 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
-    fetchDataPath().then(p => { setDataPath(p); setPathDraft(p) })
+    fetchConfig().then(({ dataPath: p, hasApiKey: k }) => {
+      setDataPath(p); setPathDraft(p); setHasApiKey(k)
+    })
     fetchState()
       .then(s => setState({ ...EMPTY_STATE, ...s }))
       .catch(err => {
@@ -121,12 +128,32 @@ export default function App() {
       const body = await res.json()
       if (!res.ok) { setPathError(body.error ?? 'Failed to save path'); return }
       setDataPath(body.dataPath)
+      setHasApiKey(body.hasApiKey)
       setShowSettings(false)
       fetchState()
         .then(s => setState({ ...EMPTY_STATE, ...s }))
         .catch(() => setState(EMPTY_STATE))
     } catch {
       setPathError('Could not reach server')
+    }
+  }
+
+  async function saveApiKey() {
+    setApiKeyError('')
+    setApiKeySaved(false)
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anthropicApiKey: apiKeyDraft.trim() }),
+      })
+      const body = await res.json()
+      if (!res.ok) { setApiKeyError(body.error ?? 'Failed to save key'); return }
+      setHasApiKey(body.hasApiKey)
+      setApiKeyDraft('')
+      setApiKeySaved(true)
+    } catch {
+      setApiKeyError('Could not reach server')
     }
   }
 
@@ -203,7 +230,7 @@ export default function App() {
 
       {showSettings && (
         <div className="settings-bar">
-          <label className="settings-label">Data file path</label>
+          <label className="settings-label">Data file</label>
           <input
             className="settings-path-input"
             value={pathDraft}
@@ -215,6 +242,20 @@ export default function App() {
           {pathError && <span className="settings-error">{pathError}</span>}
           <button className="btn-save" onClick={saveDataPath}>Save</button>
           <button className="btn-cancel" onClick={() => setShowSettings(false)}>Cancel</button>
+          <div className="settings-divider" />
+          <label className="settings-label">Claude API key</label>
+          <input
+            className="settings-path-input settings-apikey-input"
+            type="password"
+            value={apiKeyDraft}
+            onChange={e => { setApiKeyDraft(e.target.value); setApiKeySaved(false) }}
+            onKeyDown={e => { if (e.key === 'Enter') saveApiKey() }}
+            placeholder={hasApiKey ? '••••••••••••••••••• (key saved)' : 'sk-ant-…'}
+            autoComplete="off"
+          />
+          {apiKeyError && <span className="settings-error">{apiKeyError}</span>}
+          {apiKeySaved && <span className="settings-ok">Saved ✓</span>}
+          <button className="btn-save" onClick={saveApiKey}>Save</button>
         </div>
       )}
 
@@ -316,6 +357,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <ChatPanel state={state} calc={calc} hasApiKey={hasApiKey} />
     </div>
   )
 }

@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev":    "concurrently -n server,vite -c cyan,magenta \"node server.cjs\" \"npm run dev --prefix app\"",
-    "build":  "npm run build --prefix app",
-    "server": "node server.cjs"
+    "dev": "concurrently -n server,vite -c cyan,magenta \"node server.cjs\" \"npm run dev --prefix app\"",
+    "build": "npm run build --prefix app",
+    "server": "node server.cjs",
+    "test": "node --test server.test.cjs",
+    "test:unit": "npm test --prefix app"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "express": "^4.21.2"
   },
   "devDependencies": {
