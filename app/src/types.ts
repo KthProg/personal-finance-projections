@@ -74,6 +74,8 @@ export interface IncomeCalc {
   afterWithholdingPerPaycheck: number
   regularExpensesMonthly: number
   regularExpensesPerPaycheck: number
+  postTaxInvestmentsMonthly: number
+  postTaxInvestmentsPerPaycheck: number
   surplusMonthly: number
   surplusPerPaycheck: number
   necessitiesMonthly: number

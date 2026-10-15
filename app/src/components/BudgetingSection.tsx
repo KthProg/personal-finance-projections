@@ -43,25 +43,44 @@ function hashId(date: string, description: string, amount: number): string {
 
 function parseChaseCSV(text: string): Transaction[] {
   const lines = text.trim().split(/\r?\n/)
+  if (lines.length < 2) return []
+  const header = lines[0].toLowerCase()
+  // Chase checking account: Details,Posting Date,Description,Amount,Type,Balance,...
+  // Chase credit card:      Transaction Date,Post Date,Description,Category,Type,Amount,...
+  const isChecking = header.startsWith('details,')
   const result: Transaction[] = []
   const seen = new Set<string>()
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCSVLine(lines[i])
-    if (cols.length < 6) continue
-    const [date, , description, category, type, amountStr] = cols
+    let date: string, description: string, category: string, type: string, amountStr: string
+    if (isChecking) {
+      if (cols.length < 5) continue
+      date        = cols[1].trim()   // Posting Date
+      description = cols[2].trim()   // Description
+      amountStr   = cols[3].trim()   // Amount (negative = debit)
+      type        = cols[4].trim()   // Type (ACH_DEBIT, DEPOSIT, etc.)
+      category    = type             // No rich category in checking exports
+    } else {
+      if (cols.length < 6) continue
+      date        = cols[0].trim()   // Transaction Date
+      description = cols[2].trim()   // Description
+      category    = cols[3].trim()   // Category
+      type        = cols[4].trim()   // Type
+      amountStr   = cols[5].trim()   // Amount
+    }
     const amount = parseFloat(amountStr)
     if (isNaN(amount)) continue
-    const desc = decodeHTML(description.trim())
-    const d    = date.trim()
-    const id   = hashId(d, desc, amount)
+    const desc = decodeHTML(description)
+    if (!date || !desc) continue
+    const id = hashId(date, desc, amount)
     if (seen.has(id)) continue
     seen.add(id)
     result.push({
       id,
-      date: d,
+      date,
       description: desc,
-      category: category.trim() || 'Uncategorized',
-      type: type.trim(),
+      category: category || 'Uncategorized',
+      type,
       amount,
     })
   }
@@ -71,13 +90,26 @@ function parseChaseCSV(text: string): Transaction[] {
 // ── Exclusion rules ───────────────────────────────────────────────────────────
 
 const EXCLUDE_PATTERNS: RegExp[] = [
-  /e[\*\-]?trade/i,   // E*TRADE / ETrade transfers (investments)
-  /lively/i,          // Lively HSA transfers (investments)
-  /loan\s*pay/i,      // Loan payments
+  /e[\*\-]?trade/i,        // E*TRADE / ETrade transfers (investments)
+  /lively/i,               // Lively HSA transfers (investments)
+  /loan\s*pay/i,           // Loan payments
   /loan\s*pmt/i,
+  /cons\s*loan/i,          // Consumer loan payments (MSGCU etc.)
+  /mspbna/i,               // Morgan Stanley Bank transfers (investments)
+  /unitedwholesale/i,      // United Wholesale Mortgage payments
+  /cenlar/i,               // Cenlar mortgage servicer
+  /chase credit crd/i,     // Chase credit card autopay (already counted as CC purchases)
 ]
 
+// Checking account transaction types that are transfers/non-spending, not regular expenses
+const EXCLUDE_CHECKING_TYPES = new Set([
+  'DEPOSIT', 'ACH_CREDIT', 'QUICKPAY_CREDIT', 'PARTNERFI_TO_CHASE',
+  'CHASE_TO_PARTNERFI', 'WIRE_INCOMING', 'WIRE_OUTGOING', 'CHECK_DEPOSIT',
+  'ACCT_XFER', 'LOAN_PMT',
+])
+
 function isExcluded(t: Transaction): boolean {
+  if (EXCLUDE_CHECKING_TYPES.has(t.type)) return true
   return EXCLUDE_PATTERNS.some(p => p.test(t.description))
 }
 

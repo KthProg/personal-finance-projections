@@ -90,6 +90,15 @@ export default function IncomeSection({ calc, payPeriodsPerYear }: Props) {
               isDeduction
               note="All non-withholding expenses"
             />
+            {calc.postTaxInvestmentsMonthly > 0 && (
+              <WaterfallRow
+                label="Post-Tax Contributions"
+                monthly={calc.postTaxInvestmentsMonthly}
+                perPaycheck={calc.postTaxInvestmentsPerPaycheck}
+                isDeduction
+                note="Roth IRA and other after-tax investments"
+              />
+            )}
             <WaterfallRow
               label="Surplus"
               monthly={calc.surplusMonthly}
@@ -147,6 +156,12 @@ export default function IncomeSection({ calc, payPeriodsPerYear }: Props) {
             <span>Regular Expenses</span>
             <span>−{fmt(calc.regularExpensesMonthly)}</span>
           </div>
+          {calc.postTaxInvestmentsMonthly > 0 && (
+            <div className="breakdown-row deduction">
+              <span>Post-Tax Contributions</span>
+              <span>−{fmt(calc.postTaxInvestmentsMonthly)}</span>
+            </div>
+          )}
           <div className="breakdown-row total">
             <span>Surplus</span>
             <span>{fmt(calc.surplusMonthly)}</span>
@@ -171,6 +186,12 @@ export default function IncomeSection({ calc, payPeriodsPerYear }: Props) {
             <span>Regular Expenses</span>
             <span>−{fmt(calc.regularExpensesPerPaycheck)}</span>
           </div>
+          {calc.postTaxInvestmentsPerPaycheck > 0 && (
+            <div className="breakdown-row deduction">
+              <span>Post-Tax Contributions</span>
+              <span>−{fmt(calc.postTaxInvestmentsPerPaycheck)}</span>
+            </div>
+          )}
           <div className="breakdown-row total">
             <span>Surplus</span>
             <span>{fmt(calc.surplusPerPaycheck)}</span>

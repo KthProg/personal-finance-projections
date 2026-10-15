@@ -89,8 +89,13 @@ export function calculateIncome(state: AppState): IncomeCalc {
 
   const regularExpensesPerPaycheck = regularExpensesMonthly * 12 / ppp
 
-  const surplusMonthly     = afterWithholdingMonthly     - regularExpensesMonthly
-  const surplusPerPaycheck = afterWithholdingPerPaycheck - regularExpensesPerPaycheck
+  // ── Post-tax investments (Roth IRA, after-tax brokerage, etc.) ────────────
+  const postTaxInv = investments.filter(i => !i.preTax && !i.employerMatch)
+  const postTaxInvestmentsMonthly     = postTaxInv.reduce((s, i) => s + i.monthlyAmount, 0)
+  const postTaxInvestmentsPerPaycheck = postTaxInvestmentsMonthly * 12 / ppp
+
+  const surplusMonthly     = afterWithholdingMonthly     - regularExpensesMonthly     - postTaxInvestmentsMonthly
+  const surplusPerPaycheck = afterWithholdingPerPaycheck - regularExpensesPerPaycheck - postTaxInvestmentsPerPaycheck
 
   // ── Extras ───────────────────────────────────────────────────────────────
   const necessitiesMonthly = expenses
@@ -116,6 +121,8 @@ export function calculateIncome(state: AppState): IncomeCalc {
     afterWithholdingPerPaycheck,
     regularExpensesMonthly,
     regularExpensesPerPaycheck,
+    postTaxInvestmentsMonthly,
+    postTaxInvestmentsPerPaycheck,
     surplusMonthly,
     surplusPerPaycheck,
     necessitiesMonthly,
