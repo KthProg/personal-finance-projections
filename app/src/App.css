@@ -64,7 +64,9 @@ body {
 }
 
 /* ── App Layout ──────────────────────────────────────────────────────────── */
-.app { display: flex; flex-direction: column; min-height: 100vh; }
+/* min-content: when the window is narrower than the widest table, the whole page scrolls horizontally
+   instead of tables scrolling inside their own boxes (whose scrollbars sit below long tables). */
+.app { display: flex; flex-direction: column; min-height: 100vh; min-width: min-content; }
 
 .app-header {
   display: flex;
@@ -319,7 +321,7 @@ body {
 .date-input { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 3px 6px; font-size: 12px; width: 130px; }
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.table-wrap { overflow: clip; border: 1px solid var(--border); border-radius: var(--radius); }
 
 .expenses-table {
   width: 100%;
@@ -1156,3 +1158,6 @@ input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-colo
 }
 .chat-send:hover:not(:disabled) { opacity: .85; }
 .chat-send:disabled { opacity: .35; cursor: not-allowed; }
+
+.amazon-item { font-size: 11px; max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.amazon-dept { opacity: .75; }

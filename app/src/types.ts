@@ -44,6 +44,16 @@ export interface Transaction {
   category: string
   type: string        // 'Sale' | 'Payment' | 'Return'
   amount: number      // raw CSV amount — negative for sales, positive for returns/payments
+  amazonItems?: AmazonItem[]  // items from Amazon order history matched to this charge
+}
+
+export interface AmazonItem {
+  orderId: string
+  name: string
+  department: string
+  asin: string
+  quantity: number
+  amount: number      // line total incl. tax
 }
 
 export interface AppState {

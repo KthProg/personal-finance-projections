@@ -3,6 +3,7 @@ import type { Transaction, Expense } from '../types'
 import { EXPENSE_CATEGORIES } from '../constants'
 
 import { toMonthly, fmt } from '../calculations'
+import { parseAmazonOrders, matchAmazonOrders } from '../amazon'
 
 interface Props {
   transactions: Transaction[]
@@ -113,6 +114,28 @@ function isExcluded(t: Transaction): boolean {
   return EXCLUDE_PATTERNS.some(p => p.test(t.description))
 }
 
+// ── Checking account categorization ───────────────────────────────────────────
+
+// Checking exports have no category column, so the transaction type (ACH_DEBIT etc.) is stored as the
+// category. Map known payees to expense categories so they line up with the budget.
+const CHECKING_CATEGORY_RULES: [RegExp, string][] = [
+  [/allstate/i,                  'Bills & Utilities'],  // Home insurance
+  [/wolverine\s*mutual/i,        'Bills & Utilities'],  // Auto insurance
+  [/national\s*general/i,        'Bills & Utilities'],  // Auto insurance
+  [/prop\s*tax/i,                'Bills & Utilities'],  // Property taxes
+  [/dte\s*energy/i,              'Bills & Utilities'],
+  [/consumers\s*energy/i,        'Bills & Utilities'],
+  [/comcast|xfinity/i,           'Bills & Utilities'],
+  [/detroit\s*wtr/i,             'Bills & Utilities'],
+  [/^pf\s/i,                     'Health & Wellness'],  // Planet Fitness
+]
+
+function categorize(t: Transaction): Transaction {
+  if (t.category !== t.type) return t  // credit card rows already have a real category
+  const rule = CHECKING_CATEGORY_RULES.find(([p]) => p.test(t.description))
+  return rule ? { ...t, category: rule[1] } : t
+}
+
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
 function parseMMDDYYYY(s: string): Date {
@@ -128,6 +151,27 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round(Math.abs(b.getTime() - a.getTime()) / 86_400_000) + 1
 }
 
+type DateRange = 'all' | 'ytd' | '12m' | '6m' | '3m'
+
+const DATE_RANGES: { value: DateRange; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'ytd', label: 'YTD' },
+  { value: '12m', label: '12M' },
+  { value: '6m',  label: '6M' },
+  { value: '3m',  label: '3M' },
+]
+
+function rangeStart(range: DateRange, today: Date): Date | null {
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate()
+  switch (range) {
+    case 'ytd': return new Date(y, 0, 1)
+    case '12m': return new Date(y, m - 12, d)
+    case '6m':  return new Date(y, m - 6, d)
+    case '3m':  return new Date(y, m - 3, d)
+    default:    return null
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type SortField = 'date' | 'amount' | 'category' | 'description'
@@ -135,12 +179,16 @@ type SortDir   = 'asc' | 'desc'
 
 export default function BudgetingSection({ transactions, expenses, payPeriodsPerYear, onChange }: Props) {
   const csvRef = useRef<HTMLInputElement>(null)
+  const amazonRef = useRef<HTMLInputElement>(null)
   const [sort, setSort]         = useState<{ field: SortField; dir: SortDir }>({ field: 'date', dir: 'desc' })
   const [catFilter, setCatFilter] = useState<string>('all')
   const [page, setPage]           = useState(0)
+  const [range, setRange]         = useState<DateRange>('ytd')
   const PAGE_SIZE = 25
 
-  const purchases = transactions.filter(t => t.type !== 'Payment' && !isExcluded(t))
+  const allPurchases = transactions.filter(t => t.type !== 'Payment' && !isExcluded(t)).map(categorize)
+  const cutoff       = rangeStart(range, new Date())
+  const purchases    = cutoff ? allPurchases.filter(t => parseMMDDYYYY(t.date) >= cutoff) : allPurchases
 
   function handleCSV(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -172,10 +220,30 @@ export default function BudgetingSection({ transactions, expenses, payPeriodsPer
       .finally(() => { e.target.value = '' })
   }
 
+  function handleAmazonCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    file.text()
+      .then(text => {
+        const result = matchAmazonOrders(transactions, parseAmazonOrders(text))
+        onChange(result.transactions)
+        alert(`Matched ${result.matched} Amazon charges to orders (${result.orderLines} order lines read).` +
+          (result.unmatched ? `\n${result.unmatched} Amazon charges still unmatched — usually gift-card splits, returns or orders outside the export.` : ''))
+      })
+      .catch(() => alert('Failed to parse — make sure this is the Amazon "Order History.csv" export.'))
+      .finally(() => { e.target.value = '' })
+  }
+
   // ── Date range ──────────────────────────────────────────────────────────────
-  const dates   = purchases.map(t => parseMMDDYYYY(t.date))
-  const minDate = dates.length ? new Date(Math.min(...dates.map(d => d.getTime()))) : null
-  const maxDate = dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : null
+  // Period spans from the range start (or earliest imported data, if later) to the latest imported data,
+  // so the prorated budget covers the window the data actually represents.
+  const dates      = allPurchases.map(t => parseMMDDYYYY(t.date).getTime())
+  const dataStart  = dates.length ? Math.min(...dates) : null
+  const dataEnd    = dates.length ? Math.max(...dates) : null
+  const minDate    = dataStart !== null && dataEnd !== null
+    ? new Date(cutoff ? Math.min(Math.max(dataStart, cutoff.getTime()), dataEnd) : dataStart)
+    : null
+  const maxDate    = dataEnd !== null ? new Date(dataEnd) : null
   const periodDays = minDate && maxDate ? daysBetween(minDate, maxDate) : 0
 
   // ── Actual spending by Chase category ───────────────────────────────────────
@@ -223,9 +291,25 @@ export default function BudgetingSection({ transactions, expenses, payPeriodsPer
   const unassignedExpenses = budgetByCategory['']?.expenses ?? []
   const unassignedMonthly  = budgetByCategory['']?.monthly ?? 0
 
+  // ── Amazon breakdown by department ─────────────────────────────────────────────
+  const amazonCharges = purchases.filter(t => /amazon|amzn/i.test(t.description) && t.amount < 0)
+  const amazonByDept: Record<string, { total: number; count: number }> = {}
+  for (const t of amazonCharges) {
+    for (const i of t.amazonItems ?? []) {
+      if (!amazonByDept[i.department]) amazonByDept[i.department] = { total: 0, count: 0 }
+      amazonByDept[i.department].total += i.amount
+      amazonByDept[i.department].count += i.quantity
+    }
+  }
+  const amazonUnmatched = amazonCharges.filter(t => !t.amazonItems?.length)
+  const amazonDeptRows  = Object.entries(amazonByDept).sort((a, b) => b[1].total - a[1].total)
+  const amazonTotal     = amazonCharges.reduce((s, t) => s - t.amount, 0)
+  const amazonUnmatchedTotal = amazonUnmatched.reduce((s, t) => s - t.amount, 0)
+
   // ── Transaction list ─────────────────────────────────────────────────────────
   const allCategories = ['all', ...Object.keys(actualByCategory).sort()]
-  const sorted = (catFilter === 'all' ? purchases : purchases.filter(t => t.category === catFilter))
+  const activeCat = allCategories.includes(catFilter) ? catFilter : 'all'
+  const sorted = (activeCat === 'all' ? purchases : purchases.filter(t => t.category === activeCat))
     .slice()
     .sort((a, b) => {
       let cmp = 0
@@ -280,8 +364,17 @@ export default function BudgetingSection({ transactions, expenses, payPeriodsPer
           )}
         </div>
         <div className="header-actions">
+          <div className="filter-bar">
+            {DATE_RANGES.map(r => (
+              <button key={r.value} className={`filter-btn ${range === r.value ? 'active' : ''}`} onClick={() => { setRange(r.value); setPage(0) }}>
+                {r.label}
+              </button>
+            ))}
+          </div>
           <input ref={csvRef} type="file" accept=".csv" multiple style={{ display: 'none' }} onChange={handleCSV} />
           <button className="btn-secondary" onClick={() => csvRef.current?.click()}>Import CSV</button>
+          <input ref={amazonRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleAmazonCSV} />
+          <button className="btn-secondary" onClick={() => amazonRef.current?.click()} title="Import Amazon Order History.csv to see items behind Amazon charges">Import Amazon</button>
           <button className="btn-reset" onClick={() => { if (confirm('Clear all imported transactions?')) onChange([]) }}>Clear</button>
         </div>
       </div>
@@ -370,13 +463,50 @@ export default function BudgetingSection({ transactions, expenses, payPeriodsPer
         </div>
       )}
 
+      {/* Amazon breakdown */}
+      {amazonDeptRows.length > 0 && (
+        <div className="breakdown-card">
+          <h3>Amazon by department ({fmt(amazonTotal)} across {amazonCharges.length} charges)</h3>
+          <div className="table-wrap" style={{ border: 'none' }}>
+            <table className="expenses-table">
+              <thead>
+                <tr>
+                  <th>Department</th>
+                  <th className="num-cell">Items</th>
+                  <th className="num-cell">Spent</th>
+                  <th className="num-cell">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {amazonDeptRows.map(([dept, { total, count }]) => (
+                  <tr key={dept}>
+                    <td>{dept}</td>
+                    <td className="num-cell">{count}</td>
+                    <td className="num-cell">{fmt(total)}</td>
+                    <td className="num-cell muted">{amazonTotal > 0 ? `${Math.round(total / amazonTotal * 100)}%` : '—'}</td>
+                  </tr>
+                ))}
+                {amazonUnmatched.length > 0 && (
+                  <tr>
+                    <td className="muted">Unmatched charges</td>
+                    <td className="num-cell muted">{amazonUnmatched.length} tx</td>
+                    <td className="num-cell muted">{fmt(amazonUnmatchedTotal)}</td>
+                    <td className="num-cell muted">{amazonTotal > 0 ? `${Math.round(amazonUnmatchedTotal / amazonTotal * 100)}%` : '—'}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Transaction list */}
       <div className="breakdown-card">
         <div className="tx-list-header">
           <h3>Transactions</h3>
           <div className="filter-bar" style={{ margin: 0 }}>
             {allCategories.map(cat => (
-              <button key={cat} className={`filter-btn ${catFilter === cat ? 'active' : ''}`} onClick={() => { setCatFilter(cat); setPage(0) }}>
+              <button key={cat} className={`filter-btn ${activeCat === cat ? 'active' : ''}`} onClick={() => { setCatFilter(cat); setPage(0) }}>
                 {cat === 'all' ? 'All' : cat}
               </button>
             ))}
@@ -398,7 +528,14 @@ export default function BudgetingSection({ transactions, expenses, payPeriodsPer
                 return (
                   <tr key={t.id}>
                     <td className="freq-cell">{fmtDate(t.date)}</td>
-                    <td>{t.description}</td>
+                    <td>
+                      {t.description}
+                      {t.amazonItems?.map((i, n) => (
+                        <div key={n} className="muted amazon-item" title={i.name}>
+                          {i.quantity > 1 ? `${i.quantity}× ` : ''}{i.name} <span className="amazon-dept">· {i.department} · {fmt(i.amount)}</span>
+                        </div>
+                      ))}
+                    </td>
                     <td className="freq-cell">{t.category}</td>
                     <td className="num-cell">
                       {spend < 0
